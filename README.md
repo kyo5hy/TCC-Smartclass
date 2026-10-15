@@ -65,18 +65,25 @@ Toda a arquitetura foi projetada para operar estritamente em **rede local (LAN)*
 ## ⚙️ Hardware e Conectividade (Câmeras IP e RTSP)
 
 - **Servidor de Borda / Processamento IA:** Raspberry Pi 4 (processamento autônomo em arquitetura ARM64 via contêineres Docker com motores NCNN).
-- **Captação de Mídia:** Câmeras de segurança IP integradas via protocolo **RTSP** (Real-Time Streaming Protocol).
+- **Captação de Mídia:** Câmeras de segurança IP integradas e webcams locais via protocolo **RTSP** (Real-Time Streaming Protocol).
+- **Multiplataforma (Docker):** O sistema é totalmente conteinerizado, rodando de forma nativa e otimizada em **Raspberry Pi 4 (arquitetura ARM64)**, servidores ou desktops **Linux**, e em ambientes Windows utilizando o **Docker Desktop**.
 
 ### Como configurar o link RTSP
 Para conectar o SmartClass a uma câmera de segurança IP, o fluxo de vídeo é mapeado utilizando a URL padrão do protocolo RTSP. A estrutura básica utilizada nos arquivos de configuração do sistema é:
 
 `rtsp://USUARIO:SENHA@IPCAMERA:554/cam/realmonitor?channel=1&subtype=1`
 
+Exemplo de link simulado ou mapeado para webcam local exposta via stream RTSP local:
 Onde:
 - **USUARIO / SENHA**: Credenciais de acesso configuradas na sua câmera IP (ex: Hikvision, Intelbras).
 - **IPCAMERA**: Endereço IP local da câmera na rede da instituição (ex: `192.168.1.100`).
 - **554**: Porta padrão de comunicação RTSP.
 - **channel=1&subtype=1**: Parâmetros de canal e resolução (geralmente o subfluxo `subtype=1` é utilizado para otimizar o desempenho do processamento de visão computacional na borda).
+
+2. Webcams Locais (USB / Integradas)
+Caso você deseje utilizar uma webcam comum de computador nos testes locais, é necessário utilizar uma biblioteca auxiliar (como o v4l2loopback no Linux ou ferramentas de streaming intermediárias como o FFmpeg / vlc) para converter e expor o sinal físico da webcam como um link de transmissão RTSP ou stream de rede. Sem essa exposição prévia por biblioteca/driver externo, o container Docker não conseguirá capturar o fluxo de vídeo adequadamente.
+
+`rtsp://admin:admin@127.0.0.1:8554/live`
 
 ---
 
@@ -166,8 +173,8 @@ docker-compose up --build
 4. **Acesse a aplicação:**
 Abra o seu navegador web e acesse:
 ```text
-http://localhost:3000
-
+http://localhost:3000 
+http://ipmaquina:3000
 ```
 
 
@@ -203,7 +210,7 @@ O sistema passou por três ciclos rigorosos de prototipagem iterativa, cobrindo:
 
 * **Testes de Concorrência de Vídeo:** Desacoplamento do buffer de gravação para evitar *Race Conditions* no OpenCV.
 * **Testes de Segurança (OWASP Top 10 / Auditoria Estática):** Correção de falhas de autenticação, controle de acesso e tratamento de rotas sensíveis (validados via `npm audit` e `pip-audit`).
-* **Validação de Borda:** Estabilidade de inferência em CPU ARM sem aceleração dedicada por GPU.
+* **Validação de Borda:** Estabilidade de inferência validada em ambiente Linux, Windows (Docker Desktop) e dispositivos de borda ARM.
 
 ---
 
