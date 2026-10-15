@@ -1,8 +1,4 @@
-Aqui está o seu `README.md` completo, reformatado utilizando **apenas Markdown puro** para as imagens (removendo tags HTML desnecessárias), com os **badges coloridos** de linguagens/bibliotecas no topo, a explicação detalhada do link **RTSP** e a **remoção completa de todas as citações numéricas** dos parágrafos, conforme solicitado.
 
-Você pode copiar o bloco de código abaixo e colar diretamente no seu arquivo `README.md`:
-
-```markdown
 # 🎓 SmartClass
 
 **Sistema Inteligente de Monitoramento de Frequência e Comportamento em Sala de Aula com Visão Computacional em Edge Computing**
