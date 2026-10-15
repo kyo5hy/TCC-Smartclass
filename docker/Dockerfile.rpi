@@ -1,0 +1,72 @@
+# =============================================================================
+# docker/Dockerfile.rpi — Ambiente de PRODUÇÃO (ARM64 — Raspberry Pi 4/5)
+# Multi-stage: node_api e python_ia, selecionados via "target:" no compose.
+# Build context = raiz do projeto. Rode o build NO PRÓPRIO Raspberry Pi.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# STAGE: node_api
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS node_api
+WORKDIR /app
+COPY node_api/package.json node_api/package-lock.json* ./node_api/
+RUN cd node_api && npm install --omit=dev
+COPY node_api/ ./node_api/
+COPY frontend/ ./frontend/
+WORKDIR /app/node_api
+EXPOSE 3000
+CMD ["node", "server.js"]
+
+# ---------------------------------------------------------------------------
+# STAGE: python_ia
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS python_ia
+WORKDIR /app
+
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    pkg-config \
+    gfortran \
+    libopenblas-dev \
+    liblapack-dev \
+    libjpeg-dev \
+    libpng-dev \
+    libtiff-dev \
+    libavcodec-dev \
+    libavformat-dev \
+    libswscale-dev \
+    libv4l-dev \
+    ffmpeg \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    libx11-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# piwheels.org distribui wheels pré-compiladas para ARM (Raspberry Pi OS),
+# reduzindo o tempo de build de pacotes pesados (numpy, opencv, torch).
+ENV PIP_EXTRA_INDEX_URL="https://www.piwheels.org/simple"
+# Raspberry Pi 4/5 têm 4 núcleos: acelera a compilação do dlib via cmake.
+ENV MAKEFLAGS="-j4"
+# Ver Dockerfile.dev para explicação (CMake 4.x removeu compatibilidade
+# com cmake_minimum_required antigo, usado pelo pybind11 embutido no dlib).
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
+# PyTorch travado numa versão anterior à mudança do weights_only (ver
+# Dockerfile.dev). Em ARM64 não existem wheels CUDA de qualquer forma,
+# então aqui já vem naturalmente CPU-only, sem sufixo "+cpu".
+RUN pip install --no-cache-dir torch==2.3.1 torchvision==0.18.1
+
+COPY python_ia/requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip wheel "setuptools<81" && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY python_ia/ ./python_ia/
+WORKDIR /app/python_ia
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8000
+CMD ["python", "main.py"]

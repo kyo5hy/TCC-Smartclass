@@ -1,0 +1,14 @@
+Este diretório precisa conter, exatamente como no seu projeto original:
+
+  - face_engine.py
+  - pose_engine.py
+
+Esses dois arquivos são importados por python_ia/main.py, mas não foram
+enviados nesta conversa — só o main.py foi. Copie-os do seu projeto original
+para dentro desta pasta antes de rodar "docker compose build".
+
+O mesmo vale para os pesos e modelos YOLO/NCNN que main.py espera encontrar
+em python_ia/: yolov8n.pt, yolov8n-pose.pt, yolov8n_ncnn_model/,
+yolov8n-face_ncnn_model/, yolov8n-pose_ncnn_model/.
+
+Este arquivo pode ser apagado depois que você completar a pasta.

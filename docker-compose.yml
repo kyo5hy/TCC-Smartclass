@@ -1,0 +1,48 @@
+networks:
+  smartclass_net:
+    driver: bridge
+
+volumes:
+  smartclass_data:
+
+services:
+  python_ia:
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE:-docker/Dockerfile.dev}
+      target: python_ia
+    image: smartclass/python_ia:latest
+    container_name: smartclass_python_ia
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - smartclass_data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - smartclass_net
+    # Descomente se a câmera for uma webcam USB local (índice numérico):
+    # devices:
+    #   - "/dev/video0:/dev/video0"
+
+  node_api:
+    build:
+      context: .
+      dockerfile: ${DOCKERFILE:-docker/Dockerfile.dev}
+      target: node_api
+    image: smartclass/node_api:latest
+    container_name: smartclass_node_api
+    restart: unless-stopped
+    depends_on:
+      - python_ia
+    env_file:
+      - .env
+    environment:
+      - PYTHON_IA_URL=http://python_ia:8000
+    volumes:
+      - smartclass_data:/app/data
+    ports:
+      - "3000:3000"
+    networks:
+      - smartclass_net

@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SmartClass - Gestão Pedagógica SaaS</title>
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2220%22 fill=%22%230f172a%22/><text x=%2250%22 y=%2270%22 font-size=%2260%22 text-anchor=%22middle%22 fill=%22%237AC142%22 font-family=%22Arial, sans-serif%22>S</text></svg>">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link href="css/style.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+</head>
+<body>
+
+    <div id="toast-box" class="custom-toast"></div>
+
+    <div id="login-overlay" style="display: none;">
+        <div class="login-box">
+            <h1>Smart<span style="color:var(--if-green);">C</span>lass<span style="color:var(--if-red);">.</span></h1>
+            <p style="color:var(--text-muted); margin-bottom: 25px;">Faça login para acessar o sistema</p>
+            <input type="email" id="login-email" placeholder="Email institucional">
+            <input type="password" id="login-senha" placeholder="Senha">
+            <button class="btn-green" onclick="fazerLogin()"><i class="fas fa-sign-in-alt"></i> Entrar no Sistema</button>
+        </div>
+    </div>
+
+    <div class="sidebar">
+        <div class="logo-container">
+            <h1 class="logo-title">Smart<span style="color:#7AC142;">C</span>lass<span style="color:#E30613;">.</span></h1>
+            <div class="logo-sub">Instituto Federal</div>
+        </div>
+        <div class="menu-item active" onclick="switchTab('tab-home')"><i class="fas fa-chart-line"></i> Analytics Geral</div>
+        <div class="menu-item" onclick="switchTab('tab-live')"><i class="fas fa-chalkboard-teacher"></i> Aula Virtual (Live)</div>
+        <div class="menu-item" onclick="switchTab('tab-assentos')"><i class="fas fa-chair"></i> Mapeamento de Turma</div>
+        <div class="menu-item" onclick="switchTab('tab-alunos')"><i class="fas fa-user-graduate"></i> Central de Alunos</div>
+        <div class="menu-item" onclick="switchTab('tab-gestao')"><i class="fas fa-book"></i> Estrutura Curricular</div>
+        <div class="menu-item" onclick="switchTab('tab-historico')"><i class="fas fa-clipboard-check"></i> Diários e Alertas</div>
+        <div class="menu-item" id="menu-infra" style="display:none;" onclick="switchTab('tab-infra')"><i class="fas fa-video"></i> Ambientes e Câmeras</div>
+        
+        <div class="menu-item" id="menu-usuarios" style="display:none;" onclick="switchTab('tab-usuarios')"><i class="fas fa-user-shield"></i> Gerenciar Usuários</div>
+
+        <div class="user-profile-badge" onclick="logout()">
+            <i class="fas fa-user-circle" style="font-size:1.5em; color:var(--if-green)"></i>
+            <span id="user-display-name">Carregando...</span>
+            <i class="fas fa-sign-out-alt" style="margin-left:auto; color:var(--text-muted)"></i>
+        </div>
+    </div>
+
+    <div class="main-content">
+        
+        <div id="tab-home" class="tab-content active">
+            <h2 class="page-header"><i class="fas fa-chart-line"></i> Visão Geral da Instituição</h2>
+            <div class="grid-3" style="margin-bottom: 30px;">
+                <div class="stat-card" style="border-bottom: 4px solid var(--if-green);">
+                    <i class="fas fa-user-graduate" style="font-size:2em; color:var(--if-green)"></i>
+                    <div class="stat-value" id="lbl-total-alunos">0</div>
+                    <span style="color:var(--text-muted); font-size:0.9em; font-weight:500">Alunos Cadastrados</span>
+                </div>
+                <div class="stat-card" style="border-bottom: 4px solid var(--primary);">
+                    <i class="fas fa-chalkboard-teacher" style="font-size:2em; color:var(--primary)"></i>
+                    <div class="stat-value" id="lbl-total-aulas">0</div>
+                    <span style="color:var(--text-muted); font-size:0.9em; font-weight:500">Aulas Ministradas</span>
+                </div>
+                <div class="stat-card" style="border-bottom: 4px solid var(--warning);">
+                    <i class="fas fa-bell" style="font-size:2em; color:var(--warning)"></i>
+                    <div class="stat-value" id="lbl-total-alertas">0</div>
+                    <span style="color:var(--text-muted); font-size:0.9em; font-weight:500">Alertas e Evasões</span>
+                </div>
+            </div>
+            <div class="grid-2">
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-chart-bar"></i> Frequência: Cadastrados vs Presentes</h3>
+                    <div style="width: 100%; height: 250px;"><canvas id="chart-frequencia"></canvas></div>
+                </div>
+                
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-chart-pie"></i> Distribuição de Comportamento</h3>
+                    <p style="font-size:0.8em; color:var(--text-muted); margin-top:-10px">Índice real da última aula (Foco vs Infrações).</p>
+                    <div style="width: 100%; height: 220px; display: flex; justify-content: center;"><canvas id="chart-retencao"></canvas></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-live" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-chalkboard-teacher"></i> Aula Virtual e Reconhecimento</h2>
+            <div class="card flex-row" id="barra-controle" style="padding: 20px;">Carregando painel...</div>
+
+            <div class="live-grid">
+                <div class="camera-wrapper" id="video-container">
+                    <img id="live-video" src="" alt="Selecione a turma e inicie a aula para ligar o processamento.">
+                    <button class="btn-outline" style="position: absolute; bottom: 10px; right: 10px; background: rgba(15, 23, 42, 0.8); color: white; border: none; z-index: 50;" onclick="toggleFullScreen()"><i class="fas fa-expand"></i> Ampliar</button>
+                </div>
+                <div class="card" style="margin:0; padding:20px; display:flex; flex-direction:column;">
+                    <h3 class="card-title" style="border-bottom: 1px solid var(--border-color); padding-bottom:15px;"><i class="fas fa-users"></i> Presença em Tempo Real</h3>
+                    <div id="lista-alunos" style="flex:1; overflow-y:auto; padding-right:10px; margin-top:10px">
+                        <span style="color:var(--text-muted); font-size:0.95em">Aguardando IA processar rostos...</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="tab-assentos" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-chair"></i> Mapeamento de Turma (Opcional)</h2>
+            <div class="card">
+                <p class="card-desc"><b>Dica de Uso:</b> No Ensino Superior, as turmas costumam ter lugares livres. No Ensino Médio, vincule os alunos às bancadas para o sistema validar se eles estão sentados no local correto.</p>
+                <div class="flex-row">
+                    <select id="sel-materia-assento" onchange="carregarEditorAssentos()"></select>
+                    <select id="sel-sala-assento" onchange="carregarEditorAssentos()"></select>
+                    <button class="btn-primary" style="background:var(--primary); color:white; width: auto; white-space: nowrap;" onclick="salvarAssentos()"><i class="fas fa-save"></i> Salvar Layout</button>
+                </div>
+                <div id="lista-assentos" style="margin-top: 25px;"></div>
+            </div>
+        </div>
+
+        <div id="tab-alunos" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-user-graduate"></i> Central de Alunos</h2>
+            <div class="card" style="width: 100%;">
+                <div class="flex-row" style="justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                    <h3 class="card-title" style="margin: 0;"><i class="fas fa-users"></i> Alunos Matriculados</h3>
+                    <div class="flex-row" style="gap: 15px;">
+                        <select id="filtro-turma-aluno" onchange="filtrarAlunos()" style="min-width: 200px;">
+                            <option value="todas">Todas as Turmas</option>
+                        </select>
+                        <button class="btn-primary" style="width: auto; font-size: 0.9em; padding: 10px 16px; border-radius: 6px; background-color: var(--if-green); white-space: nowrap;" onclick="document.getElementById('excel-upload').click()">
+                            <i class="fas fa-file-excel"></i> Importar Diário (SIGAA)
+                        </button>
+                        <input type="file" id="excel-upload" accept=".xls,.xlsx" style="display: none;" onchange="processarExcel(event)">
+                    </div>
+                </div>
+                <div class="table-container"><div id="tabela-alunos"></div></div>
+            </div>
+        </div>
+
+        <div id="tab-gestao" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-book"></i> Estrutura Curricular</h2>
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-bookmark"></i> Disciplinas e Turmas Vinculadas</h3>
+                <p class="card-desc">Toda a estrutura de turmas e disciplinas é criada automaticamente ao <b>Importar o Diário (SIGAA)</b> na aba Central de Alunos.</p>
+                <div class="table-container" style="margin-top: 20px;"><div id="tabela-materias"></div></div>
+            </div>
+        </div>
+
+        <div id="tab-historico" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-clipboard-check"></i> Diários de Classe e Alertas</h2>
+            <div class="card" style="border-top: 4px solid var(--if-green);">
+                <h3 class="card-title"><i class="fas fa-file-excel"></i> Histórico de Aulas e Atestados</h3>
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;"><div id="tabela-historico"></div></div>
+            </div>
+            <div class="card" style="border-top: 4px solid var(--warning);">
+                <h3 class="card-title"><i class="fas fa-bell"></i> Métricas de Atenção e Alertas</h3>
+                <div class="table-container" style="max-height: 280px; overflow-y: auto;"><div id="tabela-alertas"></div></div>
+            </div>
+        </div>
+
+        <div id="tab-infra" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-video"></i> Ambientes e Câmeras</h2>
+            <div class="card">
+                <h3 class="card-title"><i class="fas fa-plus-circle"></i> Cadastrar Novo Ambiente</h3>
+                <div class="flex-row" style="margin-bottom: 25px;">
+                    <input type="text" id="in-sala" placeholder="Nome do Ambiente (Ex: Lab. Hardware)">
+                    <input type="text" id="in-cam" placeholder="Link RTSP da Câmera (ou 0)">
+                    <button class="btn-green" style="width: auto; white-space: nowrap;" onclick="addSala()"><i class="fas fa-save"></i> Gravar Ambiente</button>
+                </div>
+                <div class="table-container"><div id="tabela-salas"></div></div>
+            </div>
+        </div>
+        
+        <div id="tab-usuarios" class="tab-content">
+            <h2 class="page-header"><i class="fas fa-user-shield"></i> Gestão de Usuários (Acesso Restrito)</h2>
+            <div class="grid-2">
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-user-plus"></i> Criar Novo Usuário</h3>
+                    <input type="text" id="cad-user-nome" placeholder="Nome do Professor">
+                    <input type="email" id="cad-user-email" placeholder="Email de login">
+                    <input type="password" id="cad-user-senha" placeholder="Senha inicial">
+                    <select id="cad-user-role">
+                        <option value="professor">Professor (Acesso Padrão)</option>
+                        <option value="admin">Administrador (Acesso Total)</option>
+                    </select>
+                    <button class="btn-green" style="width: 100%; margin-top:15px;" onclick="salvarUsuario()"><i class="fas fa-check"></i> Criar Conta</button>
+                </div>
+                <div class="card">
+                    <h3 class="card-title"><i class="fas fa-users"></i> Usuários do Sistema</h3>
+                    <div class="table-container"><div id="tabela-usuarios-admin"></div></div>
+                </div>
+            </div>
+
+            <div class="card" style="margin-top:25px;">
+                <h3 class="card-title"><i class="fas fa-sliders-h"></i> Configurações de Sensibilidade da IA</h3>
+                <p class="card-desc">Ajuste fino da detecção. Valores mais baixos de "confiança" detectam mais fácil (inclusive à distância), mas aumentam o risco de falsos positivos. Os demais ajustes são aplicados na próxima aula iniciada.</p>
+                <p class="card-desc">A sensibilidade da ação suspeita é aplicada na próxima atualização de pose (o intervalo depende da velocidade da câmera/IA). Ela calibra a tolerância a movimentos menores: nível alto também facilita reconhecer o balanço depois de levantar o braço. Mão levantada e parada, sozinha, não é classificada como balanço.</p>
+                <div class="grid-3">
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">🙌 Sensibilidade da ação suspeita (<span id="cfg-acao-sensibilidade-valor">10</span>/10)</label>
+                        <input type="range" id="cfg-acao-sensibilidade" min="1" max="10" step="1" value="10" oninput="atualizarLabelSensibilidadeAcao()">
+                        <span style="font-size:0.8em; color:var(--text-muted);">1 = exige movimentos maiores e menos alertas. 10 = percebe balanços menores; pode aumentar falsos positivos.</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">👤 Confiança Facial (0.1–0.9)</label>
+                        <input type="number" id="cfg-face-conf" step="0.05" min="0.1" max="0.9">
+                        <span style="font-size:0.8em; color:var(--text-muted);">0,6 é o ponto de equilíbrio recomendado. Menor reconhece mais fácil de longe/de lado porém com mais erro; maior é mais rígido porém mais lento para reconhecer.</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">🎯 Tolerância de Reconhecimento (0.30–0.60)</label>
+                        <input type="number" id="cfg-tolerancia-facial" step="0.01" min="0.30" max="0.60">
+                        <span style="font-size:0.8em; color:var(--text-muted);">Menor = mais rígido (evita confundir duas pessoas parecidas). Maior = mais permissivo.</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">📱 Confiança Celular (0.1–0.9)</label>
+                        <input type="number" id="cfg-phone-conf" step="0.05" min="0.1" max="0.9">
+                        <span style="font-size:0.8em; color:var(--text-muted);">0,6 é o ponto de equilíbrio recomendado. Menor detecta mais fácil porém com mais falso positivo; maior é mais rígido porém mais lento para confirmar.</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">📱 Confirmações p/ Celular (1–5 detecções)</label>
+                        <input type="number" id="cfg-confirmacoes-celular" step="1" min="1" max="5">
+                        <span style="font-size:0.8em; color:var(--text-muted);">Nº de detecções numa janela de ~1,2s para confirmar o celular antes do alerta (evita falso positivo isolado, ex: capa de celular).</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">⏱️ Cooldown entre alertas de celular (seg)</label>
+                        <input type="number" id="cfg-tempo-celular" step="1" min="1" max="30">
+                        <span style="font-size:0.8em; color:var(--text-muted);">O alerta é instantâneo; isso só evita repetir o mesmo alerta em sequência.</span>
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">⏱️ Tempo p/ alerta de distração (seg)</label>
+                        <input type="number" id="cfg-tempo-distracao" step="1" min="1" max="60">
+                    </div>
+                    <div>
+                        <label style="font-weight:600; font-size:0.9em;">📏 Distância máx. celular↔rosto (px)</label>
+                        <input type="number" id="cfg-max-dist" step="50" min="200" max="2000">
+                        <span style="font-size:0.8em; color:var(--text-muted);">Só usada para EXIBIR de quem é o celular na tela — nunca bloqueia o alerta.</span>
+                    </div>
+                </div>
+                <button class="btn-blue" style="margin-top:15px;" onclick="salvarConfigIA()"><i class="fas fa-save"></i> Salvar Configurações de IA</button>
+            </div>
+        </div>
+
+    </div>
+
+    <div id="modal-mapa" class="modal">
+        <div class="modal-content">
+            <h3 class="card-title" style="justify-content:center; font-size:1.5em; margin-bottom: 5px;">🗺️ Calibração Poligonal</h3>
+            <p class="card-desc" style="margin-bottom:20px;">Clique na tela para criar os pontos de cada mesa. <b>Clique na primeira bolinha vermelha para fechar a forma</b> e salvá-la.</p>
+            <div class="draw-area" style="position:relative;">
+                <img id="map-img" src="">
+                <canvas id="map-canvas" width="640" height="480"></canvas>
+                <div id="nome-bancada-overlay" style="display:none; position:absolute; background:var(--bg-surface); border:2px solid var(--if-green); border-radius:10px; padding:14px; box-shadow:0 10px 25px rgba(0,0,0,0.2); z-index:10;">
+                    <label style="font-size:0.85em; font-weight:600; display:block; margin-bottom:6px;">Nome desta bancada:</label>
+                    <input type="text" id="input-nome-bancada" placeholder="Ex: Bancada 3" style="width:200px; margin-bottom:8px;" onkeydown="if(event.key==='Enter') confirmarNomeBancada(); if(event.key==='Escape') cancelarNomeBancada();">
+                    <div class="flex-row" style="gap:8px;">
+                        <button class="btn-green" style="padding:8px 14px; font-size:0.85em;" onclick="confirmarNomeBancada()"><i class="fas fa-check"></i> Salvar</button>
+                        <button class="btn-outline" style="padding:8px 14px; font-size:0.85em;" onclick="cancelarNomeBancada()">Cancelar</button>
+                    </div>
+                </div>
+            </div>
+            <div class="flex-row" style="justify-content: center; gap: 15px; margin-top:25px;">
+                <button class="btn-outline" onclick="limparCanvas()"><i class="fas fa-undo"></i> Limpar Tudo</button>
+                <button class="btn-green" onclick="salvarMapa()"><i class="fas fa-save"></i> Salvar Calibração</button>
+                <button class="btn-red" onclick="fecharModalMapa()"><i class="fas fa-times"></i> Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-foto" class="modal">
+        <div class="modal-content" style="max-width: 500px;">
+            <h3 class="card-title" style="border-bottom: 1px solid var(--border-color); padding-bottom: 10px;">
+                <i class="fas fa-id-card"></i> Biometria: <span id="foto-aluno-nome" style="color:var(--text-main); margin-left:8px;"></span>
+            </h3>
+            <input type="hidden" id="foto-aluno-mat">
+            
+            <div class="flex-row" style="margin-top: 20px;">
+                <button class="btn-outline" style="flex:1" onclick="abrirWebcam()"><i class="fas fa-camera"></i> Capturar</button>
+                <button class="btn-outline" style="flex:1" onclick="document.getElementById('file-upload').click()"><i class="fas fa-upload"></i> Importar JPG</button>
+                <input type="file" id="file-upload" accept="image/*" style="display: none;" onchange="handleFileUpload(event)">
+            </div>
+            
+            <div id="cam-box" style="display:none; margin-top:20px; position:relative;">
+                <video id="webcam-preview" style="width:100%; border-radius:8px; border:1px solid var(--border-color);" autoplay></video>
+                <button class="btn-red" style="position:absolute; top:10px; right:10px; padding:6px 12px; font-size:0.8em;" onclick="fecharWebcam()"><i class="fas fa-times"></i> Fechar</button>
+            </div>
+            
+            <img id="img-preview" style="display:none; width:100%; border-radius:8px; margin-top:20px; border:3px solid var(--if-green)">
+            
+            <div class="flex-row" style="margin-top: 25px; gap: 15px;">
+                <button class="btn-red" style="flex: 1;" onclick="fecharModalFoto()"><i class="fas fa-times"></i> Cancelar</button>
+                <button class="btn-green" style="flex: 2;" onclick="salvarFotoAluno()"><i class="fas fa-brain"></i> Salvar e Treinar IA</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-video" class="modal">
+        <div class="modal-content" style="max-width: 640px;">
+            <h3 class="card-title" style="justify-content:center; font-size:1.3em; margin-bottom: 5px;">🎥 Gravação do Evento</h3>
+            <img id="alert-video-player" src="" style="width:100%; border-radius:8px; border:1px solid var(--border-color);">
+            <button class="btn-red" style="margin-top: 15px; width: 100%;" onclick="fecharModalVideo()"><i class="fas fa-times"></i> Fechar Vídeo</button>
+        </div>
+    </div>
+
+    <div id="modal-screenshot" class="modal">
+        <div class="modal-content" style="max-width: 640px;">
+            <h3 class="card-title" style="justify-content:center; font-size:1.3em; margin-bottom: 5px;">📸 Captura do Evento</h3>
+            <img id="alert-screenshot-viewer" src="" style="width:100%; border-radius:8px; border:1px solid var(--border-color);">
+            <button class="btn-red" style="margin-top: 15px; width: 100%;" onclick="fecharModalScreenshot()"><i class="fas fa-times"></i> Fechar Foto</button>
+        </div>
+    </div>
+
+    <script src="js/app.js"></script>
+</body>
+</html>

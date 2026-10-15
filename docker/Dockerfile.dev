@@ -1,0 +1,63 @@
+# =============================================================================
+# docker/Dockerfile.dev — Ambiente de DESENVOLVIMENTO (x86_64)
+# Multi-stage: node_api e python_ia, selecionados via "target:" no compose.
+# Build context = raiz do projeto.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# STAGE: node_api
+# ---------------------------------------------------------------------------
+FROM node:20-alpine AS node_api
+WORKDIR /app
+COPY node_api/package.json node_api/package-lock.json* ./node_api/
+RUN cd node_api && npm install --omit=dev
+COPY node_api/ ./node_api/
+COPY frontend/ ./frontend/
+WORKDIR /app/node_api
+EXPOSE 3000
+CMD ["node", "server.js"]
+
+# ---------------------------------------------------------------------------
+# STAGE: python_ia
+# ---------------------------------------------------------------------------
+FROM python:3.11-slim-bookworm AS python_ia
+WORKDIR /app
+
+# git: necessário para instalar face_recognition_models do GitHub
+# build-essential/cmake: necessários para compilar dlib
+# ffmpeg + libs: decodificação RTSP e OpenCV headless
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    build-essential \
+    cmake \
+    git \
+    ffmpeg \
+    libgl1 \
+    libglib2.0-0 \
+    libsm6 \
+    libxext6 \
+    libxrender1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# O pip baixa sua própria versão do pacote "cmake" (4.x), que removeu suporte
+# a projetos com cmake_minimum_required < 3.5 (o pybind11 embutido no dlib
+# usa isso). Esta flag reativa a compatibilidade apenas para esse caso.
+ENV CMAKE_POLICY_VERSION_MINIMUM=3.5
+
+# Instala o PyTorch ANTES do requirements.txt, travado numa versão anterior
+# à mudança de padrão do torch.load (weights_only=True desde o PyTorch 2.6,
+# incompatível com o ultralytics==8.2.24 usado aqui), via índice CPU-only
+# (evita ~1.5 GB de pacotes CUDA da NVIDIA que este projeto não usa).
+RUN pip install --no-cache-dir torch==2.3.1+cpu torchvision==0.18.1+cpu \
+    --extra-index-url https://download.pytorch.org/whl/cpu
+
+COPY python_ia/requirements.txt .
+# setuptools<81: versões recentes removeram o "pkg_resources" embutido, que
+# face_recognition_models ainda importa internamente.
+RUN pip install --no-cache-dir --upgrade pip wheel "setuptools<81" && \
+    pip install --no-cache-dir -r requirements.txt
+
+COPY python_ia/ ./python_ia/
+WORKDIR /app/python_ia
+ENV PYTHONUNBUFFERED=1
+EXPOSE 8000
+CMD ["python", "main.py"]
